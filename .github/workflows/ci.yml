@@ -1,0 +1,85 @@
+# Intégration continue : GitHub exécute ces vérifications à chaque push.
+# Résultats : onglet "Actions" du dépôt sur GitHub.
+name: CI
+
+# Quand lancer le workflow.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  # Ajoute un bouton "Run workflow" dans l'onglet Actions.
+  workflow_dispatch:
+
+# Droits minimum : le workflow peut seulement lire le code.
+permissions:
+  contents: read
+
+# Si on pousse deux fois de suite, la première exécution est annulée.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # --- Job 1 : les tests pytest ----------------------------------------------
+  tests:
+    name: Tests (pytest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      # Récupère le code du dépôt sur la machine.
+      - uses: actions/checkout@v7.0.1
+
+      # Installe uv (la même version qu'en local).
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          version: "0.13.0"
+          # Garde en cache les paquets téléchargés : les exécutions
+          # suivantes sont plus rapides.
+          enable-cache: true
+
+      # Installe Python (version du fichier .python-version) et les
+      # dépendances. --locked : échoue si uv.lock n'est pas à jour.
+      - name: Installer les dépendances
+        run: uv sync --locked
+
+      - name: Lancer les tests
+        run: uv run pytest -v
+
+  # --- Job 2 : l'image Docker --------------------------------------------------
+  docker:
+    name: Image Docker
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - name: Construire l'image
+        run: docker build -t webapp:ci .
+
+      # Démarre un conteneur avec une clé secrète jetable, juste pour le test.
+      - name: Démarrer le conteneur
+        run: |
+          docker run -d --name webapp -p 5000:5000 \
+            -e SECRET_KEY=cle-jetable-pour-la-ci \
+            webapp:ci
+
+      # Test de fumée : on attend que le site réponde (30 secondes maximum),
+      # puis on vérifie quelques pages.
+      - name: Vérifier que le site répond
+        run: |
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:5000/ > /dev/null; then
+              echo "Le site répond après ${i} seconde(s)."
+              break
+            fi
+            sleep 1
+          done
+          curl -sf http://localhost:5000/ | grep -q "Bienvenue"
+          curl -sf http://localhost:5000/bonjour | grep -q "Noms enregistrés"
+          curl -sf http://localhost:5000/connexion | grep -q "Connexion"
+          echo "Toutes les pages répondent."
+
+      # En cas d'échec, affiche les messages du conteneur pour comprendre.
+      - name: Afficher les logs du conteneur
+        if: failure()
+        run: docker logs webapp
