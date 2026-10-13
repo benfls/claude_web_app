@@ -8,8 +8,8 @@
 </head>
 <body>
     <nav>
-        <a href="{{ url_for('accueil') }}">Accueil</a>
-        <a href="{{ url_for('bonjour') }}">Dire bonjour</a>
+        <a href="{{ url_for('pages.accueil') }}">Accueil</a>
+        <a href="{{ url_for('pages.bonjour') }}">Dire bonjour</a>
     </nav>
     <main>
         {% block contenu %}{% endblock %}

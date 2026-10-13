@@ -5,52 +5,59 @@ pytest lit automatiquement ce fichier. Les fonctions marquées
 en paramètre : pytest les exécute et passe le résultat au test.
 """
 
-import sqlite3
-
 import pytest
 
-import webapp
+from webapp import appliquer_migrations, create_app
+from webapp.modeles import Nom, db
 
 
 @pytest.fixture
-def base_de_test(tmp_path, monkeypatch):
-    """Remplace la vraie base par une base vide, propre à chaque test.
+def base_de_test(tmp_path):
+    """Chemin d'une base vide, propre à chaque test.
 
-    tmp_path est un dossier temporaire fourni par pytest, et monkeypatch
-    remet la valeur d'origine à la fin du test : votre noms.db n'est
-    jamais touché.
+    tmp_path est un dossier temporaire fourni par pytest : votre noms.db
+    n'est jamais touché.
     """
-    chemin = tmp_path / "test.db"
-    monkeypatch.setattr(webapp, "BASE_DE_DONNEES", chemin)
-    webapp.creer_table()
-    return chemin
+    return tmp_path / "test.db"
 
 
 @pytest.fixture
-def client(base_de_test):
+def app(base_de_test):
+    """Une application branchée sur la base de test, créée par les migrations."""
+    app = create_app(
+        {
+            "TESTING": True,
+            "SQLALCHEMY_DATABASE_URI": f"sqlite:///{base_de_test}",
+        }
+    )
+    appliquer_migrations(app)
+    return app
+
+
+@pytest.fixture
+def client(app):
     """Un faux navigateur pour appeler les pages sans lancer de serveur."""
-    webapp.app.config["TESTING"] = True
-    return webapp.app.test_client()
+    return app.test_client()
 
 
 @pytest.fixture
-def lire_noms(base_de_test):
+def lire_noms(app):
     """Renvoie une fonction qui lit les noms directement dans la base."""
 
     def lire():
-        conn = sqlite3.connect(base_de_test)
-        lignes = conn.execute("SELECT nom FROM noms ORDER BY id").fetchall()
-        conn.close()
-        return [ligne[0] for ligne in lignes]
+        # app_context() : SQLAlchemy a besoin de savoir de quelle
+        # application (donc de quelle base) il s'agit.
+        with app.app_context():
+            return list(db.session.scalars(db.select(Nom.nom).order_by(Nom.id)))
 
     return lire
 
 
 @pytest.fixture
-def id_ben(base_de_test):
+def id_ben(app):
     """Ajoute le nom "Ben" dans la base et renvoie son numéro (id)."""
-    conn = sqlite3.connect(base_de_test)
-    curseur = conn.execute("INSERT INTO noms (nom) VALUES ('Ben')")
-    conn.commit()
-    conn.close()
-    return curseur.lastrowid
+    with app.app_context():
+        ben = Nom(nom="Ben")
+        db.session.add(ben)
+        db.session.commit()
+        return ben.id

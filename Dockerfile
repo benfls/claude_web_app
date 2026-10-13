@@ -25,6 +25,9 @@ ENV PATH="/app/.venv/bin:$PATH" \
 
 EXPOSE 5000
 
-# Gunicorn : un serveur web fait pour tourner en continu
-# (contrairement au serveur de développement de "uv run webapp").
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--workers", "2", "webapp:app"]
+# Au démarrage :
+# 1) "flask db upgrade" met la structure de la base à jour (migrations) ;
+# 2) Gunicorn, un serveur web fait pour tourner en continu (contrairement
+#    au serveur de développement de "uv run webapp"), lance l'application
+#    fabriquée par create_app().
+CMD ["sh", "-c", "flask --app webapp db upgrade && exec gunicorn --bind 0.0.0.0:5000 --workers 2 'webapp:create_app()'"]

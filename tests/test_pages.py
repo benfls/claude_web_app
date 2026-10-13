@@ -5,8 +5,6 @@ Chaque fonction qui commence par "test_" est un test. Une ligne
 le test échoue et pytest affiche pourquoi.
 """
 
-import sqlite3
-
 
 def ajouter(client, nom):
     """Envoie le formulaire comme le ferait un utilisateur."""
@@ -45,16 +43,14 @@ def test_nom_ajoute_apparait_dans_la_liste(client):
     assert "Noms enregistrés (1)" in reponse.text
 
 
-def test_nom_est_bien_enregistre_dans_la_base(client, base_de_test):
+def test_nom_est_bien_enregistre_dans_la_base(client, lire_noms):
     ajouter(client, "Alice")
-    lignes = sqlite3.connect(base_de_test).execute("SELECT nom FROM noms").fetchall()
-    assert lignes == [("Alice",)]
+    assert lire_noms() == ["Alice"]
 
 
-def test_espaces_autour_du_nom_sont_retires(client, base_de_test):
+def test_espaces_autour_du_nom_sont_retires(client, lire_noms):
     ajouter(client, "  Alice  ")
-    lignes = sqlite3.connect(base_de_test).execute("SELECT nom FROM noms").fetchall()
-    assert lignes == [("Alice",)]
+    assert lire_noms() == ["Alice"]
 
 
 def test_nom_vide_n_est_pas_enregistre(client):
@@ -70,12 +66,11 @@ def test_noms_les_plus_recents_en_premier(client):
     assert page.index("Second") < page.index("Premier")
 
 
-def test_injection_sql_est_sans_effet(client, base_de_test):
+def test_injection_sql_est_sans_effet(client, lire_noms):
     nom_piege = "Alice'); DROP TABLE noms;--"
     ajouter(client, nom_piege)
     # La table existe toujours et contient le texte tel quel.
-    lignes = sqlite3.connect(base_de_test).execute("SELECT nom FROM noms").fetchall()
-    assert lignes == [(nom_piege,)]
+    assert lire_noms() == [nom_piege]
 
 
 def test_html_saisi_n_est_pas_execute(client):
