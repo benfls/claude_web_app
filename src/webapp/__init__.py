@@ -1,3 +1,4 @@
+import os
 import sqlite3
 from pathlib import Path
 
@@ -6,8 +7,15 @@ from flask import Flask, redirect, render_template, request, url_for
 # L'objet "app" représente toute l'application web.
 app = Flask(__name__)
 
-# Fichier de la base de données SQLite, à la racine du projet.
-BASE_DE_DONNEES = Path(__file__).resolve().parents[2] / "noms.db"
+# Fichier de la base de données SQLite. Par défaut à la racine du projet,
+# mais la variable d'environnement CHEMIN_BASE_DE_DONNEES peut le changer
+# (c'est ce que fait Docker, voir compose.yaml).
+BASE_DE_DONNEES = Path(
+    os.environ.get(
+        "CHEMIN_BASE_DE_DONNEES",
+        Path(__file__).resolve().parents[2] / "noms.db",
+    )
+)
 
 
 def connexion():

@@ -1,0 +1,10 @@
+# Fichiers à ne pas copier dans l'image Docker
+.git
+.venv
+__pycache__/
+*.py[oc]
+*.db
+test.py
+
+# Ne jamais mettre de secrets dans une image
+.env

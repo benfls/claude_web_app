@@ -1,0 +1,18 @@
+services:
+  webapp:
+    build: .
+    ports:
+      # Le site est accessible sur http://localhost:5000 depuis Windows.
+      - "127.0.0.1:5000:5000"
+    volumes:
+      # La base de données est rangée dans un "volume" Docker : elle est
+      # conservée même si le conteneur est supprimé ou reconstruit.
+      - donnees:/app/data
+    environment:
+      # Fuseau horaire utilisé pour les dates enregistrées.
+      TZ: Europe/Paris
+    # Redémarre automatiquement avec Docker Desktop, sauf si vous l'arrêtez.
+    restart: unless-stopped
+
+volumes:
+  donnees:
