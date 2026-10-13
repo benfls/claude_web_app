@@ -1,0 +1,16 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv
+
+# Secrets (clés API, mots de passe) : ne jamais les mettre dans Git
+.env
+
+# Base de données locale
+*.db

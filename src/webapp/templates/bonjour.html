@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block titre %}Dire bonjour{% endblock %}
+
+{% block contenu %}
+<h1>Dire bonjour</h1>
+
+<form method="post">
+    <label for="nom">Votre prénom :</label>
+    <input type="text" id="nom" name="nom" required>
+    <button type="submit">Envoyer</button>
+</form>
+
+{% if nom %}
+<p class="message">Bonjour {{ nom }} !</p>
+{% endif %}
+
+<h2>Noms enregistrés ({{ noms|length }})</h2>
+{% if noms %}
+<ul>
+    {% for ligne in noms %}
+    <li>{{ ligne["nom"] }} <small>— {{ ligne["date_ajout"] }}</small></li>
+    {% endfor %}
+</ul>
+{% else %}
+<p>Aucun nom pour l'instant.</p>
+{% endif %}
+{% endblock %}
