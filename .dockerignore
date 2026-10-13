@@ -5,6 +5,8 @@ __pycache__/
 *.py[oc]
 *.db
 test.py
+tests/
+.pytest_cache/
 
 # Ne jamais mettre de secrets dans une image
 .env
