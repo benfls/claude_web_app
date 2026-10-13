@@ -6,7 +6,9 @@ dans __init__.py. Dans les templates, on désigne une page par
 """
 
 from flask import Blueprint, redirect, render_template, request, url_for
+from flask_login import current_user, login_required
 
+from .auth import login_manager
 from .modeles import LONGUEUR_MAX_NOM, Nom, db
 
 pages = Blueprint("pages", __name__)
@@ -36,6 +38,12 @@ def accueil():
 @pages.route("/bonjour", methods=["GET", "POST"])
 def bonjour():
     if request.method == "POST":
+        # Tout le monde peut voir la liste, mais seules les personnes
+        # connectées peuvent ajouter un nom : les autres sont envoyées
+        # vers la page de connexion.
+        if not current_user.is_authenticated:
+            return login_manager.unauthorized()
+
         nom = request.form.get("nom", "").strip()
         erreur = valider_nom(nom)
         if erreur:
@@ -68,6 +76,7 @@ def bonjour():
 # <int:id_nom> récupère le numéro présent dans l'adresse,
 # par exemple /noms/3/modifier donne id_nom = 3.
 @pages.route("/noms/<int:id_nom>/modifier", methods=["GET", "POST"])
+@login_required
 def modifier(id_nom):
     # Cherche le nom par son id ; s'il n'existe pas, page "introuvable" (404).
     ligne = db.get_or_404(Nom, id_nom)
@@ -95,6 +104,7 @@ def modifier(id_nom):
 # Supprimer modifie les données : on n'accepte que POST (un bouton de
 # formulaire), jamais un simple lien GET qu'un robot pourrait suivre.
 @pages.post("/noms/<int:id_nom>/supprimer")
+@login_required
 def supprimer(id_nom):
     db.session.delete(db.get_or_404(Nom, id_nom))
     db.session.commit()

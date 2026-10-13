@@ -6,8 +6,55 @@ body {
     color: #222;
 }
 
+nav {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+    padding-bottom: 0.8rem;
+    border-bottom: 1px solid #eee;
+}
+
 nav a {
     margin-right: 1rem;
+}
+
+nav .compte {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.8rem;
+}
+
+nav form {
+    margin: 0;
+}
+
+nav button {
+    font-size: 0.9rem;
+    padding: 0.2rem 0.5rem;
+}
+
+.formulaire-compte {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    max-width: 22rem;
+}
+
+.formulaire-compte label {
+    margin-top: 0.6rem;
+    font-weight: 600;
+}
+
+.formulaire-compte small {
+    color: #666;
+}
+
+.formulaire-compte button {
+    margin-top: 1rem;
+    align-self: flex-start;
 }
 
 input, button {

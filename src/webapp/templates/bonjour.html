@@ -5,12 +5,22 @@
 {% block contenu %}
 <h1>Dire bonjour</h1>
 
+{% if current_user.is_authenticated %}
 <form method="post">
+    {# Jeton CSRF : champ caché vérifié par Flask à l'envoi du formulaire. #}
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <label for="nom">Votre prénom :</label>
     <input type="text" id="nom" name="nom" value="{{ saisie or '' }}"
            maxlength="{{ longueur_max }}" required>
     <button type="submit">Envoyer</button>
 </form>
+{% else %}
+<p>
+    <a href="{{ url_for('auth.connexion', next=request.path) }}">Connectez-vous</a>
+    ou <a href="{{ url_for('auth.inscription') }}">créez un compte</a>
+    pour ajouter un nom.
+</p>
+{% endif %}
 
 {% if erreur %}
 <p class="erreur">{{ erreur }}</p>
@@ -26,13 +36,16 @@
     {% for ligne in noms %}
     <li>
         <span>{{ ligne.nom }} <small>— {{ ligne.date_ajout.strftime("%d/%m/%Y à %H:%M") }}</small></span>
+        {% if current_user.is_authenticated %}
         <span class="actions">
             <a href="{{ url_for('pages.modifier', id_nom=ligne.id) }}">Modifier</a>
             <form method="post" action="{{ url_for('pages.supprimer', id_nom=ligne.id) }}"
                   onsubmit="return confirm('Supprimer ce nom ?')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="supprimer">Supprimer</button>
             </form>
         </span>
+        {% endif %}
     </li>
     {% endfor %}
 </ul>

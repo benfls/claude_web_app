@@ -8,10 +8,30 @@
 </head>
 <body>
     <nav>
-        <a href="{{ url_for('pages.accueil') }}">Accueil</a>
-        <a href="{{ url_for('pages.bonjour') }}">Dire bonjour</a>
+        <span class="liens">
+            <a href="{{ url_for('pages.accueil') }}">Accueil</a>
+            <a href="{{ url_for('pages.bonjour') }}">Dire bonjour</a>
+        </span>
+        <span class="compte">
+            {# current_user est fourni par Flask-Login dans tous les templates. #}
+            {% if current_user.is_authenticated %}
+            <span>Connecté : <strong>{{ current_user.nom_utilisateur }}</strong></span>
+            <form method="post" action="{{ url_for('auth.deconnexion') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit">Se déconnecter</button>
+            </form>
+            {% else %}
+            <a href="{{ url_for('auth.connexion') }}">Connexion</a>
+            <a href="{{ url_for('auth.inscription') }}">Inscription</a>
+            {% endif %}
+        </span>
     </nav>
     <main>
+        {# Messages ponctuels envoyés par flash() dans le code Python. #}
+        {% for message in get_flashed_messages() %}
+        <p class="message">{{ message }}</p>
+        {% endfor %}
+
         {% block contenu %}{% endblock %}
     </main>
 </body>

@@ -11,6 +11,9 @@ services:
     environment:
       # Fuseau horaire utilisé pour les dates enregistrées.
       TZ: Europe/Paris
+      # Clé secrète lue dans le fichier .env du projet. Si elle manque,
+      # Docker refuse de démarrer et affiche ce message.
+      SECRET_KEY: ${SECRET_KEY:?Ajoutez SECRET_KEY dans le fichier .env (voir .env.example)}
     # Redémarre automatiquement avec Docker Desktop, sauf si vous l'arrêtez.
     restart: unless-stopped
 

@@ -6,6 +6,7 @@
 <h1>Modifier un nom</h1>
 
 <form method="post">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
     <label for="nom">Nouveau nom :</label>
     <input type="text" id="nom" name="nom" value="{{ saisie }}"
            maxlength="{{ longueur_max }}" required>

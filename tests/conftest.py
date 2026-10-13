@@ -8,7 +8,11 @@ en paramètre : pytest les exécute et passe le résultat au test.
 import pytest
 
 from webapp import appliquer_migrations, create_app
-from webapp.modeles import Nom, db
+from webapp.modeles import Nom, Utilisateur, db
+
+# Compte créé pour les tests qui ont besoin d'être connectés.
+NOM_UTILISATEUR_TEST = "testeur"
+MOT_DE_PASSE_TEST = "motdepasse123"
 
 
 @pytest.fixture
@@ -28,6 +32,10 @@ def app(base_de_test):
         {
             "TESTING": True,
             "SQLALCHEMY_DATABASE_URI": f"sqlite:///{base_de_test}",
+            "SECRET_KEY": "cle-pour-les-tests",
+            # La vérification CSRF est désactivée pour simplifier la plupart
+            # des tests ; test_comptes.py la réactive pour la tester.
+            "WTF_CSRF_ENABLED": False,
         }
     )
     appliquer_migrations(app)
@@ -35,9 +43,35 @@ def app(base_de_test):
 
 
 @pytest.fixture
-def client(app):
-    """Un faux navigateur pour appeler les pages sans lancer de serveur."""
+def creer_utilisateur(app):
+    """Renvoie une fonction qui crée un compte directement dans la base."""
+
+    def creer(nom_utilisateur=NOM_UTILISATEUR_TEST, mot_de_passe=MOT_DE_PASSE_TEST):
+        with app.app_context():
+            utilisateur = Utilisateur(nom_utilisateur=nom_utilisateur)
+            utilisateur.definir_mot_de_passe(mot_de_passe)
+            db.session.add(utilisateur)
+            db.session.commit()
+
+    return creer
+
+
+@pytest.fixture
+def visiteur(app):
+    """Un faux navigateur, non connecté."""
     return app.test_client()
+
+
+@pytest.fixture
+def client(app, creer_utilisateur):
+    """Un faux navigateur déjà connecté avec le compte de test."""
+    creer_utilisateur()
+    client = app.test_client()
+    client.post(
+        "/connexion",
+        data={"nom_utilisateur": NOM_UTILISATEUR_TEST, "mot_de_passe": MOT_DE_PASSE_TEST},
+    )
+    return client
 
 
 @pytest.fixture

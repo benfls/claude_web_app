@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block titre %}Inscription{% endblock %}
+
+{% block contenu %}
+<h1>Créer un compte</h1>
+
+{% if erreur %}
+<p class="erreur">{{ erreur }}</p>
+{% endif %}
+
+<form method="post" class="formulaire-compte">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <label for="nom_utilisateur">Nom d'utilisateur</label>
+    <input type="text" id="nom_utilisateur" name="nom_utilisateur"
+           value="{{ nom_utilisateur }}" maxlength="{{ longueur_max }}"
+           autocomplete="username" required>
+    <small>De 3 à {{ longueur_max }} caractères : lettres minuscules, chiffres, - ou _.</small>
+
+    <label for="mot_de_passe">Mot de passe</label>
+    <input type="password" id="mot_de_passe" name="mot_de_passe"
+           minlength="{{ longueur_min }}" autocomplete="new-password" required>
+    <small>Au moins {{ longueur_min }} caractères.</small>
+
+    <label for="confirmation">Confirmer le mot de passe</label>
+    <input type="password" id="confirmation" name="confirmation"
+           minlength="{{ longueur_min }}" autocomplete="new-password" required>
+
+    <button type="submit">Créer mon compte</button>
+</form>
+
+<p>Déjà un compte ? <a href="{{ url_for('auth.connexion') }}">Se connecter</a></p>
+{% endblock %}

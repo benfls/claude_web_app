@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block titre %}Connexion{% endblock %}
+
+{% block contenu %}
+<h1>Connexion</h1>
+
+{% if erreur %}
+<p class="erreur">{{ erreur }}</p>
+{% endif %}
+
+{# Pas d'attribut "action" : le formulaire est envoyé à la même adresse,
+   en gardant le ?next=... qui indique la page où revenir ensuite. #}
+<form method="post" class="formulaire-compte">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <label for="nom_utilisateur">Nom d'utilisateur</label>
+    <input type="text" id="nom_utilisateur" name="nom_utilisateur"
+           value="{{ nom_utilisateur }}" autocomplete="username" required>
+
+    <label for="mot_de_passe">Mot de passe</label>
+    <input type="password" id="mot_de_passe" name="mot_de_passe"
+           autocomplete="current-password" required>
+
+    <button type="submit">Se connecter</button>
+</form>
+
+<p>Pas encore de compte ? <a href="{{ url_for('auth.inscription') }}">Créer un compte</a></p>
+{% endblock %}
