@@ -20,3 +20,41 @@ input, button {
     background: #e6f4ea;
     border-radius: 6px;
 }
+
+.erreur {
+    padding: 0.8rem;
+    background: #fdecea;
+    color: #8a1c1c;
+    border-radius: 6px;
+}
+
+.liste-noms {
+    list-style: none;
+    padding: 0;
+}
+
+.liste-noms li {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #eee;
+}
+
+.actions {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+}
+
+.actions form {
+    margin: 0;
+}
+
+button.supprimer {
+    font-size: 0.9rem;
+    padding: 0.2rem 0.5rem;
+    color: #8a1c1c;
+}

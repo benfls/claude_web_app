@@ -7,9 +7,14 @@
 
 <form method="post">
     <label for="nom">Votre prénom :</label>
-    <input type="text" id="nom" name="nom" required>
+    <input type="text" id="nom" name="nom" value="{{ saisie or '' }}"
+           maxlength="{{ longueur_max }}" required>
     <button type="submit">Envoyer</button>
 </form>
+
+{% if erreur %}
+<p class="erreur">{{ erreur }}</p>
+{% endif %}
 
 {% if nom %}
 <p class="message">Bonjour {{ nom }} !</p>
@@ -17,9 +22,18 @@
 
 <h2>Noms enregistrés ({{ noms|length }})</h2>
 {% if noms %}
-<ul>
+<ul class="liste-noms">
     {% for ligne in noms %}
-    <li>{{ ligne["nom"] }} <small>— {{ ligne["date_ajout"] }}</small></li>
+    <li>
+        <span>{{ ligne["nom"] }} <small>— {{ ligne["date_ajout"] }}</small></span>
+        <span class="actions">
+            <a href="{{ url_for('modifier', id_nom=ligne['id']) }}">Modifier</a>
+            <form method="post" action="{{ url_for('supprimer', id_nom=ligne['id']) }}"
+                  onsubmit="return confirm('Supprimer ce nom ?')">
+                <button type="submit" class="supprimer">Supprimer</button>
+            </form>
+        </span>
+    </li>
     {% endfor %}
 </ul>
 {% else %}
