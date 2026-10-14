@@ -42,9 +42,29 @@ Les migrations de la base de données s'appliquent automatiquement au démarrage
 uv run pytest
 ```
 
-Les tests sont aussi lancés automatiquement par GitHub Actions à chaque push
-(voir [.github/workflows/ci.yml](.github/workflows/ci.yml)), ainsi que la
-construction et le démarrage de l'image Docker.
+Pour les lancer sur PostgreSQL (la base est vidée par les tests) :
+
+```bash
+TEST_DATABASE_URL=postgresql+psycopg://utilisateur:motdepasse@localhost:5432/tests uv run pytest
+```
+
+Les tests sont aussi lancés automatiquement par GitHub Actions à chaque push,
+sur SQLite et sur PostgreSQL (voir [.github/workflows/ci.yml](.github/workflows/ci.yml)),
+ainsi que la construction et le démarrage de l'image Docker.
+
+## Déploiement
+
+L'application est hébergée sur [Render](https://render.com), configuré par
+[render.yaml](render.yaml) : un service web (image Docker) et une base
+PostgreSQL, dans la région de Francfort.
+
+- Chaque push sur `main` est déployé automatiquement, une fois la CI au vert.
+- Les migrations s'appliquent au démarrage du conteneur.
+- Render vérifie que le site fonctionne grâce à la page `/sante`.
+
+Offre gratuite : le site se met en veille après 15 minutes sans visite (environ
+une minute pour se réveiller), et la base PostgreSQL gratuite expire 30 jours
+après sa création.
 
 ## Modifier la structure de la base
 

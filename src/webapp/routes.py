@@ -34,6 +34,15 @@ def accueil():
     return render_template("accueil.html")
 
 
+# Page de santé : l'hébergeur l'appelle régulièrement pour vérifier que
+# l'application et sa base de données fonctionnent. En cas d'erreur, la
+# page renvoie un code 500 et l'hébergeur redémarre l'application.
+@pages.route("/sante")
+def sante():
+    db.session.execute(db.text("SELECT 1"))
+    return {"etat": "ok"}
+
+
 # Cette page accepte GET (afficher le formulaire) et POST (formulaire envoyé).
 @pages.route("/bonjour", methods=["GET", "POST"])
 def bonjour():

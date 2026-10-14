@@ -30,4 +30,5 @@ EXPOSE 5000
 # 2) Gunicorn, un serveur web fait pour tourner en continu (contrairement
 #    au serveur de développement de "uv run webapp"), lance l'application
 #    fabriquée par create_app().
-CMD ["sh", "-c", "flask --app webapp db upgrade && exec gunicorn --bind 0.0.0.0:5000 --workers 2 'webapp:create_app()'"]
+# Le port est celui de la variable PORT (fournie par l'hébergeur), ou 5000.
+CMD ["sh", "-c", "flask --app webapp db upgrade && exec gunicorn --bind 0.0.0.0:${PORT:-5000} --workers 2 'webapp:create_app()'"]

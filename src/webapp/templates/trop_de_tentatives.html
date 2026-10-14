@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+
+{% block titre %}Trop de tentatives{% endblock %}
+
+{% block contenu %}
+<h1>Trop de tentatives</h1>
+<p class="erreur">
+    Par sécurité, les tentatives sont temporairement bloquées.
+    Réessayez dans quelques minutes.
+</p>
+<p><a href="{{ url_for('pages.accueil') }}">Retour à l'accueil</a></p>
+{% endblock %}

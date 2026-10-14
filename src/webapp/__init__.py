@@ -7,14 +7,15 @@ avec une base temporaire.
 """
 
 import os
+import re
 from pathlib import Path
 
 from dotenv import load_dotenv
-from flask import Flask
+from flask import Flask, render_template
 from flask_migrate import Migrate, upgrade
 from flask_wtf.csrf import CSRFProtect
 
-from .auth import auth, login_manager
+from .auth import auth, limiter, login_manager
 from .modeles import db
 from .routes import pages
 
@@ -45,19 +46,40 @@ migrate = Migrate(directory=str(DOSSIER_MIGRATIONS), render_as_batch=True)
 csrf = CSRFProtect()
 
 
+def adresse_base_de_donnees():
+    """Adresse de la base : PostgreSQL si DATABASE_URL existe, sinon SQLite.
+
+    En production, l'hébergeur (Render) fournit DATABASE_URL, de la forme
+    "postgresql://utilisateur:motdepasse@serveur/base". En local, on garde
+    le fichier SQLite.
+    """
+    url = os.environ.get("DATABASE_URL")
+    if url:
+        # On précise à SQLAlchemy d'utiliser le pilote psycopg (version 3).
+        return re.sub(r"^postgres(ql)?://", "postgresql+psycopg://", url)
+    return f"sqlite:///{BASE_DE_DONNEES}"
+
+
 def create_app(config=None):
     """Fabrique et renvoie l'application Flask.
 
     config : réglages à modifier, utilisé par les tests pour changer de base.
     """
     app = Flask(__name__)
-    app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{BASE_DE_DONNEES}"
+    app.config["SQLALCHEMY_DATABASE_URI"] = adresse_base_de_donnees()
+    # Vérifie que la connexion à la base est toujours ouverte avant de
+    # l'utiliser (un serveur PostgreSQL peut fermer les connexions inactives).
+    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {"pool_pre_ping": True}
     # Clé qui signe les cookies de session : sans elle, n'importe qui
     # pourrait fabriquer un cookie et se faire passer pour un autre.
     app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY")
     # Le navigateur n'envoie pas le cookie de session lors d'un envoi de
     # formulaire depuis un autre site (protection supplémentaire contre CSRF).
     app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+    # En production (PRODUCTION=1), le site est servi en HTTPS : le cookie de
+    # session ne doit alors jamais circuler sur une connexion non chiffrée.
+    app.config["PRODUCTION"] = os.environ.get("PRODUCTION") == "1"
+    app.config["SESSION_COOKIE_SECURE"] = app.config["PRODUCTION"]
     if config:
         app.config.update(config)
 
@@ -71,8 +93,30 @@ def create_app(config=None):
     migrate.init_app(app, db)
     csrf.init_app(app)
     login_manager.init_app(app)
+    limiter.init_app(app)
     app.register_blueprint(pages)
     app.register_blueprint(auth)
+
+    @app.errorhandler(429)
+    def trop_de_tentatives(erreur):
+        """Page affichée quand la limite de tentatives est dépassée."""
+        return render_template("trop_de_tentatives.html"), 429
+
+    @app.after_request
+    def entetes_de_securite(reponse):
+        """Ajoute des consignes de sécurité pour le navigateur à chaque page."""
+        # Interdit d'afficher le site dans un cadre sur un autre site
+        # (technique utilisée pour piéger les clics : "clickjacking").
+        reponse.headers["X-Frame-Options"] = "DENY"
+        # Le navigateur ne doit pas deviner le type d'un fichier.
+        reponse.headers["X-Content-Type-Options"] = "nosniff"
+        # N'envoie pas l'adresse complète de nos pages aux autres sites.
+        reponse.headers["Referrer-Policy"] = "same-origin"
+        if app.config["PRODUCTION"]:
+            # Le navigateur doit toujours utiliser HTTPS pour ce site, un an.
+            reponse.headers["Strict-Transport-Security"] = "max-age=31536000"
+        return reponse
+
     return app
 
 

@@ -5,7 +5,10 @@ pytest lit automatiquement ce fichier. Les fonctions marquées
 en paramètre : pytest les exécute et passe le résultat au test.
 """
 
+import os
+
 import pytest
+from flask_migrate import downgrade
 
 from webapp import appliquer_migrations, create_app
 from webapp.modeles import Nom, Utilisateur, db
@@ -13,6 +16,11 @@ from webapp.modeles import Nom, Utilisateur, db
 # Compte créé pour les tests qui ont besoin d'être connectés.
 NOM_UTILISATEUR_TEST = "testeur"
 MOT_DE_PASSE_TEST = "motdepasse123"
+
+# Pour lancer les tests sur PostgreSQL plutôt que SQLite, par exemple :
+#   TEST_DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost/tests uv run pytest
+# (la CI le fait automatiquement). Attention : la base indiquée est vidée.
+URL_BASE_DE_TEST = os.environ.get("TEST_DATABASE_URL")
 
 
 @pytest.fixture
@@ -31,15 +39,25 @@ def app(base_de_test):
     app = create_app(
         {
             "TESTING": True,
-            "SQLALCHEMY_DATABASE_URI": f"sqlite:///{base_de_test}",
+            "SQLALCHEMY_DATABASE_URI": URL_BASE_DE_TEST or f"sqlite:///{base_de_test}",
             "SECRET_KEY": "cle-pour-les-tests",
-            # La vérification CSRF est désactivée pour simplifier la plupart
-            # des tests ; test_comptes.py la réactive pour la tester.
+            # La vérification CSRF et la limitation des tentatives sont
+            # désactivées pour simplifier la plupart des tests ;
+            # test_comptes.py et test_production.py les réactivent.
             "WTF_CSRF_ENABLED": False,
+            "RATELIMIT_ENABLED": False,
         }
     )
     appliquer_migrations(app)
-    return app
+    yield app
+
+    # Après le test : avec PostgreSQL, la base n'est pas un fichier jetable,
+    # on annule donc les migrations pour la laisser vide pour le test suivant.
+    if URL_BASE_DE_TEST:
+        with app.app_context():
+            db.session.remove()
+            downgrade(revision="base")
+            db.engine.dispose()
 
 
 @pytest.fixture

@@ -1,0 +1,42 @@
+# Configuration de l'hébergement sur Render ("Blueprint").
+# Render lit ce fichier pour créer le site web et sa base de données.
+# Documentation : https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: webapp-noms
+    # Render construit l'image à partir du Dockerfile du dépôt.
+    runtime: docker
+    plan: free
+    # Francfort : la région la plus proche de la France.
+    region: frankfurt
+    # Render appelle cette page pour vérifier que le site fonctionne.
+    healthCheckPath: /sante
+    # Redéploie automatiquement à chaque push sur main, mais seulement
+    # une fois que la CI GitHub (tests) est passée au vert.
+    autoDeployTrigger: checksPass
+    envVars:
+      # Render génère une clé secrète aléatoire à la création du service.
+      - key: SECRET_KEY
+        generateValue: true
+      # Adresse de la base PostgreSQL ci-dessous, fournie par Render.
+      - key: DATABASE_URL
+        fromDatabase:
+          name: webapp-noms-db
+          property: connectionString
+      # Active les réglages de production (HTTPS obligatoire...).
+      - key: PRODUCTION
+        value: "1"
+      - key: TZ
+        value: Europe/Paris
+
+databases:
+  - name: webapp-noms-db
+    plan: free
+    region: frankfurt
+    postgresMajorVersion: "17"
+    databaseName: webapp
+    user: webapp
+    # Liste vide : la base n'est accessible que par vos services Render,
+    # jamais directement depuis Internet.
+    ipAllowList: []
