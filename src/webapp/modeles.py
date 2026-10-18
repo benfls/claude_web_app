@@ -4,11 +4,12 @@ Avec SQLAlchemy, une classe = une table, un attribut = une colonne,
 et un objet de cette classe = une ligne de la table.
 """
 
+import hashlib
 from datetime import datetime
 
 from flask_login import UserMixin
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import ForeignKey, MetaData, String
+from sqlalchemy import ForeignKey, MetaData, String, false
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -17,6 +18,9 @@ LONGUEUR_MAX_NOM = 50
 
 # Longueur maximum d'un nom d'utilisateur.
 LONGUEUR_MAX_NOM_UTILISATEUR = 30
+
+# Longueur maximum d'une adresse e-mail (norme des adresses e-mail).
+LONGUEUR_MAX_EMAIL = 254
 
 
 class Base(DeclarativeBase):
@@ -83,6 +87,17 @@ class Utilisateur(UserMixin, db.Model):
 
     date_creation: Mapped[datetime] = mapped_column(default=datetime.now)
 
+    # Adresse e-mail, pour récupérer un mot de passe oublié. Facultative en
+    # base (les comptes créés avant cette version n'en ont pas), mais unique.
+    # On l'enregistre toujours en minuscules.
+    email: Mapped[str | None] = mapped_column(String(LONGUEUR_MAX_EMAIL), unique=True)
+
+    # True une fois que l'utilisateur a cliqué sur le lien de confirmation :
+    # on est alors sûr que l'adresse est bien la sienne.
+    # server_default : valeur donnée aux comptes déjà existants lors de la
+    # migration (sinon la base refuserait d'ajouter la colonne).
+    email_verifie: Mapped[bool] = mapped_column(default=False, server_default=false())
+
     # Relation inverse : un_utilisateur.noms donne la liste de ses noms.
     noms: Mapped[list["Nom"]] = relationship(back_populates="auteur")
 
@@ -93,6 +108,23 @@ class Utilisateur(UserMixin, db.Model):
     def verifier_mot_de_passe(self, mot_de_passe):
         """Renvoie True si le mot de passe correspond à l'empreinte."""
         return check_password_hash(self.mot_de_passe_hash, mot_de_passe)
+
+    def empreinte_mot_de_passe(self):
+        """Court résumé du mot de passe actuel, qui change avec lui.
+
+        Il est glissé dans le cookie de session et dans les liens de
+        réinitialisation : quand le mot de passe change, les anciens cookies
+        et les anciens liens deviennent invalides.
+        """
+        return hashlib.sha256(self.mot_de_passe_hash.encode()).hexdigest()[:16]
+
+    def get_id(self):
+        """Ce que Flask-Login enregistre dans le cookie de session.
+
+        "id:empreinte" au lieu du seul id : changer de mot de passe déconnecte
+        toutes les autres sessions (voir charger_utilisateur dans auth.py).
+        """
+        return f"{self.id}:{self.empreinte_mot_de_passe()}"
 
     def __repr__(self):
         return f"<Utilisateur {self.id} {self.nom_utilisateur!r}>"

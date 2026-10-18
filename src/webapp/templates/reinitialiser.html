@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block titre %}Nouveau mot de passe{% endblock %}
+
+{% block contenu %}
+<h1>Nouveau mot de passe</h1>
+
+{% if lien_invalide %}
+<p class="erreur">
+    Ce lien est invalide, a expiré ou a déjà été utilisé.
+</p>
+<p><a href="{{ url_for('auth.mot_de_passe_oublie') }}">Demander un nouveau lien</a></p>
+{% else %}
+
+{% if erreur %}
+<p class="erreur">{{ erreur }}</p>
+{% endif %}
+
+{# Pas d'attribut "action" : le formulaire est renvoyé à la même adresse,
+   qui contient le jeton. #}
+<form method="post" class="formulaire-compte">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <label for="mot_de_passe">Nouveau mot de passe</label>
+    <input type="password" id="mot_de_passe" name="mot_de_passe"
+           minlength="{{ longueur_min }}" autocomplete="new-password" required>
+    <small>Au moins {{ longueur_min }} caractères.</small>
+
+    <label for="confirmation">Confirmer le mot de passe</label>
+    <input type="password" id="confirmation" name="confirmation"
+           minlength="{{ longueur_min }}" autocomplete="new-password" required>
+
+    <button type="submit">Enregistrer</button>
+</form>
+{% endif %}
+{% endblock %}

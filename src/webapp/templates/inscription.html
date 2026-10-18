@@ -18,6 +18,11 @@
            autocomplete="username" required>
     <small>De 3 à {{ longueur_max }} caractères : lettres minuscules, chiffres, - ou _.</small>
 
+    <label for="email">Adresse e-mail</label>
+    <input type="email" id="email" name="email" value="{{ email }}"
+           maxlength="254" autocomplete="email" required>
+    <small>Pour récupérer votre mot de passe en cas d'oubli. Un lien de confirmation vous sera envoyé.</small>
+
     <label for="mot_de_passe">Mot de passe</label>
     <input type="password" id="mot_de_passe" name="mot_de_passe"
            minlength="{{ longueur_min }}" autocomplete="new-password" required>

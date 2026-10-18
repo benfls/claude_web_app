@@ -15,6 +15,7 @@ def nouvelle_application(tmp_path, **reglages):
         "SQLALCHEMY_DATABASE_URI": f"sqlite:///{tmp_path / 'test.db'}",
         "SECRET_KEY": "test",
         "WTF_CSRF_ENABLED": False,
+        "EMAIL_MODE": "test",
     }
     config.update(reglages)
     app = create_app(config)
@@ -124,6 +125,7 @@ def inscrire(client, nom_utilisateur, mot_de_passe="motdepasse123"):
         "/inscription",
         data={
             "nom_utilisateur": nom_utilisateur,
+            "email": f"{nom_utilisateur}@exemple.fr",
             "mot_de_passe": mot_de_passe,
             "confirmation": mot_de_passe,
         },
@@ -142,3 +144,17 @@ def test_les_inscriptions_refusees_ne_comptent_pas(app_limitee):
         # Mot de passe trop court : inscription refusée (400), non comptée.
         assert inscrire(app_limitee.test_client(), "compte", mot_de_passe="court").status_code == 400
     assert inscrire(app_limitee.test_client(), "compte").status_code == 302
+
+
+def demander_lien(client, email):
+    return client.post("/mot-de-passe-oublie", data={"email": email})
+
+
+def test_mot_de_passe_oublie_limite_a_3_demandes_par_adresse(app_limitee):
+    client = app_limitee.test_client()
+    for _ in range(3):
+        assert demander_lien(client, "victime@exemple.fr").status_code == 302
+    # 4e demande pour la même adresse : bloquée (évite d'inonder la victime).
+    assert demander_lien(client, "victime@exemple.fr").status_code == 429
+    # Une autre adresse n'est pas touchée.
+    assert demander_lien(client, "autre@exemple.fr").status_code == 302

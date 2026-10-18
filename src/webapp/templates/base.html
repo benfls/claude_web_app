@@ -16,6 +16,7 @@
             {# current_user est fourni par Flask-Login dans tous les templates. #}
             {% if current_user.is_authenticated %}
             <span>Connecté : <strong>{{ current_user.nom_utilisateur }}</strong></span>
+            <a href="{{ url_for('auth.compte') }}">Mon compte</a>
             <form method="post" action="{{ url_for('auth.deconnexion') }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit">Se déconnecter</button>
@@ -31,6 +32,16 @@
         {% for message in get_flashed_messages() %}
         <p class="message">{{ message }}</p>
         {% endfor %}
+
+        {# Rappel tant que le compte n'a pas d'adresse e-mail confirmée. #}
+        {% if current_user.is_authenticated and not current_user.email_verifie
+              and request.endpoint != 'auth.compte' %}
+        <p class="avertissement">
+            Sans adresse e-mail confirmée, vous ne pourrez pas récupérer votre
+            mot de passe en cas d'oubli.
+            <a href="{{ url_for('auth.compte') }}">Gérer mon adresse e-mail</a>
+        </p>
+        {% endif %}
 
         {% block contenu %}{% endblock %}
     </main>

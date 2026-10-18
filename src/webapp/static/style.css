@@ -68,6 +68,21 @@ input, button {
     border-radius: 6px;
 }
 
+.avertissement {
+    padding: 0.8rem;
+    background: #fff4e5;
+    color: #6b4200;
+    border-radius: 6px;
+}
+
+.statut-ok {
+    color: #1e6b34;
+}
+
+.statut-attente {
+    color: #8a5a00;
+}
+
 .erreur {
     padding: 0.8rem;
     background: #fdecea;

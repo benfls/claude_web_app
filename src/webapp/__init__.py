@@ -80,8 +80,25 @@ def create_app(config=None):
     # session ne doit alors jamais circuler sur une connexion non chiffrée.
     app.config["PRODUCTION"] = os.environ.get("PRODUCTION") == "1"
     app.config["SESSION_COOKIE_SECURE"] = app.config["PRODUCTION"]
+
+    # Adresse publique du site, utilisée pour les liens envoyés par e-mail.
+    app.config["ADRESSE_DU_SITE"] = os.environ.get(
+        "ADRESSE_DU_SITE", "http://localhost:5000"
+    )
+    # Envoi des e-mails (voir emails.py) : par Brevo si une clé d'API est
+    # fournie, sinon simplement affichés dans le terminal.
+    app.config["BREVO_API_KEY"] = os.environ.get("BREVO_API_KEY")
+    app.config["EMAIL_EXPEDITEUR"] = os.environ.get("EMAIL_EXPEDITEUR")
+    app.config["NOM_EXPEDITEUR"] = os.environ.get("NOM_EXPEDITEUR", "webapp-noms")
+    app.config["EMAIL_MODE"] = "brevo" if app.config["BREVO_API_KEY"] else "console"
     if config:
         app.config.update(config)
+
+    if app.config["EMAIL_MODE"] == "brevo" and not app.config["EMAIL_EXPEDITEUR"]:
+        raise RuntimeError(
+            "EMAIL_EXPEDITEUR manquant : indiquez l'adresse d'expéditeur "
+            "validée dans Brevo."
+        )
 
     if not app.config["SECRET_KEY"]:
         raise RuntimeError(
@@ -96,6 +113,12 @@ def create_app(config=None):
     limiter.init_app(app)
     app.register_blueprint(pages)
     app.register_blueprint(auth)
+
+    if app.config["PRODUCTION"] and app.config["EMAIL_MODE"] == "console":
+        app.logger.warning(
+            "BREVO_API_KEY absente : les e-mails ne sont pas envoyés, ils "
+            "s'affichent seulement dans les logs."
+        )
 
     @app.errorhandler(403)
     def acces_interdit(erreur):

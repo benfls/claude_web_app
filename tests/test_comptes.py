@@ -15,6 +15,7 @@ def inscrire(client, nom_utilisateur="nouveau", mot_de_passe="motdepasse123", co
         "/inscription",
         data={
             "nom_utilisateur": nom_utilisateur,
+            "email": f"{nom_utilisateur}@exemple.fr",
             "mot_de_passe": mot_de_passe,
             "confirmation": mot_de_passe if confirmation is None else confirmation,
         },

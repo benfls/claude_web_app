@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+
+{% block titre %}Mon compte{% endblock %}
+
+{% block contenu %}
+<h1>Mon compte</h1>
+
+<p>Nom d'utilisateur : <strong>{{ current_user.nom_utilisateur }}</strong></p>
+
+<h2>Adresse e-mail</h2>
+
+{% if current_user.email %}
+<p>
+    Adresse actuelle : <strong>{{ current_user.email }}</strong>
+    {% if current_user.email_verifie %}
+    <span class="statut-ok">(confirmée)</span>
+    {% else %}
+    <span class="statut-attente">(non confirmée)</span>
+    {% endif %}
+</p>
+{% if not current_user.email_verifie %}
+<p class="avertissement">
+    Ouvrez le lien reçu par e-mail pour confirmer votre adresse. Tant qu'elle
+    n'est pas confirmée, vous ne pourrez pas récupérer votre mot de passe.
+</p>
+<form method="post" action="{{ url_for('auth.renvoyer_confirmation') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit">Renvoyer l'e-mail de confirmation</button>
+</form>
+{% endif %}
+{% else %}
+<p class="avertissement">
+    Votre compte n'a pas encore d'adresse e-mail : ajoutez-en une pour pouvoir
+    récupérer votre mot de passe en cas d'oubli.
+</p>
+{% endif %}
+
+{% if erreur_email %}
+<p class="erreur">{{ erreur_email }}</p>
+{% endif %}
+
+<form method="post" action="{{ url_for('auth.changer_email') }}" class="formulaire-compte">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <label for="email">{{ "Nouvelle adresse e-mail" if current_user.email else "Adresse e-mail" }}</label>
+    <input type="email" id="email" name="email" value="{{ email_saisi or '' }}"
+           maxlength="254" autocomplete="email" required>
+
+    <label for="mot_de_passe_email">Mot de passe actuel</label>
+    <input type="password" id="mot_de_passe_email" name="mot_de_passe"
+           autocomplete="current-password" required>
+    <small>Par sécurité, votre mot de passe est demandé pour changer d'adresse.</small>
+
+    <button type="submit">Enregistrer l'adresse</button>
+</form>
+
+<h2>Mot de passe</h2>
+
+{% if erreur_mot_de_passe %}
+<p class="erreur">{{ erreur_mot_de_passe }}</p>
+{% endif %}
+
+<form method="post" action="{{ url_for('auth.changer_mot_de_passe') }}" class="formulaire-compte">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <label for="actuel">Mot de passe actuel</label>
+    <input type="password" id="actuel" name="actuel"
+           autocomplete="current-password" required>
+
+    <label for="nouveau">Nouveau mot de passe</label>
+    <input type="password" id="nouveau" name="mot_de_passe"
+           minlength="{{ longueur_min }}" autocomplete="new-password" required>
+    <small>Au moins {{ longueur_min }} caractères. Vos autres sessions seront déconnectées.</small>
+
+    <label for="confirmation">Confirmer le nouveau mot de passe</label>
+    <input type="password" id="confirmation" name="confirmation"
+           minlength="{{ longueur_min }}" autocomplete="new-password" required>
+
+    <button type="submit">Changer le mot de passe</button>
+</form>
+{% endblock %}

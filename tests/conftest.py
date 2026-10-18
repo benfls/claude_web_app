@@ -11,11 +11,19 @@ import pytest
 from flask_migrate import downgrade
 
 from webapp import appliquer_migrations, create_app
+from webapp.emails import boite_de_test
 from webapp.modeles import Nom, Utilisateur, db
+
+# Sécurité : les tests ne doivent jamais envoyer de vrais e-mails, même si
+# une clé Brevo se trouve dans le fichier .env.
+os.environ.pop("BREVO_API_KEY", None)
 
 # Compte créé pour les tests qui ont besoin d'être connectés.
 NOM_UTILISATEUR_TEST = "testeur"
 MOT_DE_PASSE_TEST = "motdepasse123"
+
+# Adresse du site utilisée dans les liens des e-mails pendant les tests.
+ADRESSE_DU_SITE_TEST = "http://site-de-test"
 
 # Pour lancer les tests sur PostgreSQL plutôt que SQLite, par exemple :
 #   TEST_DATABASE_URL=postgresql+psycopg://postgres:postgres@localhost/tests uv run pytest
@@ -46,9 +54,13 @@ def app(base_de_test):
             # test_comptes.py et test_production.py les réactivent.
             "WTF_CSRF_ENABLED": False,
             "RATELIMIT_ENABLED": False,
+            # Les e-mails sont rangés dans boite_de_test au lieu d'être envoyés.
+            "EMAIL_MODE": "test",
+            "ADRESSE_DU_SITE": ADRESSE_DU_SITE_TEST,
         }
     )
     appliquer_migrations(app)
+    boite_de_test.clear()
     yield app
 
     # Après le test : avec PostgreSQL, la base n'est pas un fichier jetable,
@@ -64,9 +76,23 @@ def app(base_de_test):
 def creer_utilisateur(app):
     """Renvoie une fonction qui crée un compte dans la base et renvoie son id."""
 
-    def creer(nom_utilisateur=NOM_UTILISATEUR_TEST, mot_de_passe=MOT_DE_PASSE_TEST):
+    def creer(
+        nom_utilisateur=NOM_UTILISATEUR_TEST,
+        mot_de_passe=MOT_DE_PASSE_TEST,
+        email="",
+        email_verifie=True,
+    ):
+        # Par défaut, adresse "<nom>@exemple.fr", déjà confirmée.
+        # email=None : compte sans adresse (comme les comptes d'avant).
+        if email == "":
+            email = f"{nom_utilisateur}@exemple.fr"
+        if email is None:
+            # Pas d'adresse, donc rien de confirmé.
+            email_verifie = False
         with app.app_context():
-            utilisateur = Utilisateur(nom_utilisateur=nom_utilisateur)
+            utilisateur = Utilisateur(
+                nom_utilisateur=nom_utilisateur, email=email, email_verifie=email_verifie
+            )
             utilisateur.definir_mot_de_passe(mot_de_passe)
             db.session.add(utilisateur)
             db.session.commit()
@@ -89,6 +115,12 @@ def navigateur_connecte(app, nom_utilisateur):
 def id_testeur(creer_utilisateur):
     """Crée le compte de test et renvoie son id."""
     return creer_utilisateur()
+
+
+@pytest.fixture
+def boite_mail(app):
+    """Liste des e-mails "envoyés" pendant le test (destinataire, sujet, texte)."""
+    return boite_de_test
 
 
 @pytest.fixture
