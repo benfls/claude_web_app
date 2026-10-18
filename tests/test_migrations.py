@@ -3,7 +3,7 @@ sans perdre les données déjà enregistrées."""
 
 import sqlite3
 
-from flask_migrate import downgrade
+from flask_migrate import downgrade, upgrade
 
 from webapp import appliquer_migrations, create_app
 from webapp.modeles import Utilisateur, db
@@ -46,26 +46,49 @@ def lister_tables(chemin):
     return {ligne[0] for ligne in lignes}
 
 
-def test_une_ancienne_base_garde_ses_noms(tmp_path):
+def lister_colonnes(chemin, table):
+    lignes = sqlite3.connect(chemin).execute(f"PRAGMA table_info({table})").fetchall()
+    return {ligne[1] for ligne in lignes}
+
+
+def test_une_ancienne_base_est_mise_a_jour(tmp_path):
     chemin = tmp_path / "ancienne.db"
     creer_ancienne_base(chemin)
     app = application_migree(chemin)
 
-    # Le nom enregistré avant la migration s'affiche toujours,
-    # avec sa date au nouveau format.
-    page = app.test_client().get("/bonjour").text
-    assert "Ancien nom" in page
-    assert " à " in page
-
-
-def test_une_ancienne_base_recoit_la_table_utilisateurs(tmp_path):
-    chemin = tmp_path / "ancienne.db"
-    creer_ancienne_base(chemin)
-    application_migree(chemin)
     assert {"noms", "utilisateurs"} <= lister_tables(chemin)
+    assert "auteur_id" in lister_colonnes(chemin, "noms")
+    # Les noms sans auteur ont été supprimés par la migration 21be5141fa9f.
+    assert "Ancien nom" not in app.test_client().get("/bonjour").text
 
 
-def test_on_peut_ajouter_un_nom_dans_une_ancienne_base(tmp_path):
+def test_mise_a_jour_d_une_base_avec_comptes_et_noms_sans_auteur(tmp_path):
+    """Reproduit la base de production avant la migration des auteurs."""
+    chemin = tmp_path / "production.db"
+    app = create_app(
+        {"SQLALCHEMY_DATABASE_URI": f"sqlite:///{chemin}", "SECRET_KEY": "test"}
+    )
+    # On s'arrête à la migration précédente (comptes, mais pas d'auteurs).
+    with app.app_context():
+        upgrade(revision="8c4e85f807c7")
+    conn = sqlite3.connect(chemin)
+    conn.execute(
+        "INSERT INTO utilisateurs (nom_utilisateur, mot_de_passe_hash, date_creation)"
+        " VALUES ('ben', 'empreinte', '2026-10-14 10:00:00')"
+    )
+    conn.execute("INSERT INTO noms (nom, date_ajout) VALUES ('Ancien nom', '2026-10-14 10:00:00')")
+    conn.commit()
+    conn.close()
+
+    appliquer_migrations(app)
+
+    conn = sqlite3.connect(chemin)
+    # Les noms sont supprimés, les comptes sont conservés.
+    assert conn.execute("SELECT count(*) FROM noms").fetchone() == (0,)
+    assert conn.execute("SELECT nom_utilisateur FROM utilisateurs").fetchall() == [("ben",)]
+
+
+def test_on_peut_ajouter_un_nom_apres_la_migration(tmp_path):
     chemin = tmp_path / "ancienne.db"
     creer_ancienne_base(chemin)
     app = application_migree(chemin)
@@ -81,13 +104,18 @@ def test_on_peut_ajouter_un_nom_dans_une_ancienne_base(tmp_path):
     client.post("/bonjour", data={"nom": "Nouveau nom"})
 
     lignes = sqlite3.connect(chemin).execute("SELECT nom FROM noms ORDER BY id").fetchall()
-    assert lignes == [("Ancien nom",), ("Nouveau nom",)]
+    assert lignes == [("Nouveau nom",)]
 
 
 def test_les_migrations_peuvent_etre_annulees(tmp_path):
     chemin = tmp_path / "test.db"
     app = application_migree(chemin)
     assert {"noms", "utilisateurs"} <= lister_tables(chemin)
+
+    # Annuler la dernière migration retire la colonne auteur_id.
+    with app.app_context():
+        downgrade(revision="8c4e85f807c7")
+    assert "auteur_id" not in lister_colonnes(chemin, "noms")
 
     # downgrade() annule les migrations, de la plus récente à la plus ancienne.
     with app.app_context():

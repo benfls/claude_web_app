@@ -97,6 +97,11 @@ def create_app(config=None):
     app.register_blueprint(pages)
     app.register_blueprint(auth)
 
+    @app.errorhandler(403)
+    def acces_interdit(erreur):
+        """Page affichée quand on essaie de modifier le nom d'un autre."""
+        return render_template("acces_interdit.html"), 403
+
     @app.errorhandler(429)
     def trop_de_tentatives(erreur):
         """Page affichée quand la limite de tentatives est dépassée."""

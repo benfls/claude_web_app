@@ -62,7 +62,7 @@ def app(base_de_test):
 
 @pytest.fixture
 def creer_utilisateur(app):
-    """Renvoie une fonction qui crée un compte directement dans la base."""
+    """Renvoie une fonction qui crée un compte dans la base et renvoie son id."""
 
     def creer(nom_utilisateur=NOM_UTILISATEUR_TEST, mot_de_passe=MOT_DE_PASSE_TEST):
         with app.app_context():
@@ -70,8 +70,25 @@ def creer_utilisateur(app):
             utilisateur.definir_mot_de_passe(mot_de_passe)
             db.session.add(utilisateur)
             db.session.commit()
+            return utilisateur.id
 
     return creer
+
+
+def navigateur_connecte(app, nom_utilisateur):
+    """Un faux navigateur connecté avec le compte indiqué."""
+    navigateur = app.test_client()
+    navigateur.post(
+        "/connexion",
+        data={"nom_utilisateur": nom_utilisateur, "mot_de_passe": MOT_DE_PASSE_TEST},
+    )
+    return navigateur
+
+
+@pytest.fixture
+def id_testeur(creer_utilisateur):
+    """Crée le compte de test et renvoie son id."""
+    return creer_utilisateur()
 
 
 @pytest.fixture
@@ -81,15 +98,16 @@ def visiteur(app):
 
 
 @pytest.fixture
-def client(app, creer_utilisateur):
+def client(app, id_testeur):
     """Un faux navigateur déjà connecté avec le compte de test."""
-    creer_utilisateur()
-    client = app.test_client()
-    client.post(
-        "/connexion",
-        data={"nom_utilisateur": NOM_UTILISATEUR_TEST, "mot_de_passe": MOT_DE_PASSE_TEST},
-    )
-    return client
+    return navigateur_connecte(app, NOM_UTILISATEUR_TEST)
+
+
+@pytest.fixture
+def client_autre(app, creer_utilisateur):
+    """Un faux navigateur connecté avec un autre compte que celui de test."""
+    creer_utilisateur("autre")
+    return navigateur_connecte(app, "autre")
 
 
 @pytest.fixture
@@ -106,10 +124,10 @@ def lire_noms(app):
 
 
 @pytest.fixture
-def id_ben(app):
-    """Ajoute le nom "Ben" dans la base et renvoie son numéro (id)."""
+def id_ben(app, id_testeur):
+    """Ajoute le nom "Ben", écrit par le compte de test, et renvoie son id."""
     with app.app_context():
-        ben = Nom(nom="Ben")
+        ben = Nom(nom="Ben", auteur_id=id_testeur)
         db.session.add(ben)
         db.session.commit()
         return ben.id

@@ -148,8 +148,8 @@ def test_un_visiteur_ne_peut_pas_supprimer(visiteur, id_ben, lire_noms):
     assert lire_noms() == ["Ben"]
 
 
-def test_retour_a_la_page_demandee_apres_connexion(visiteur, creer_utilisateur, id_ben):
-    creer_utilisateur()
+def test_retour_a_la_page_demandee_apres_connexion(visiteur, id_ben):
+    # id_ben crée aussi le compte de test, auteur de "Ben".
     reponse = visiteur.get(f"/noms/{id_ben}/modifier")
     adresse_connexion = reponse.headers["Location"]
     reponse = connecter(visiteur, adresse=adresse_connexion)

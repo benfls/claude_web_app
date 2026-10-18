@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+
+{% block titre %}Accès interdit{% endblock %}
+
+{% block contenu %}
+<h1>Accès interdit</h1>
+<p class="erreur">Seul l'auteur d'un nom peut le modifier ou le supprimer.</p>
+<p><a href="{{ url_for('pages.bonjour') }}">Retour à la liste des noms</a></p>
+{% endblock %}

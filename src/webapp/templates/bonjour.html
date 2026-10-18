@@ -35,8 +35,13 @@
 <ul class="liste-noms">
     {% for ligne in noms %}
     <li>
-        <span>{{ ligne.nom }} <small>— {{ ligne.date_ajout.strftime("%d/%m/%Y à %H:%M") }}</small></span>
-        {% if current_user.is_authenticated %}
+        <span>
+            {{ ligne.nom }}
+            <small>— par {{ ligne.auteur.nom_utilisateur }}, le {{ ligne.date_ajout.strftime("%d/%m/%Y à %H:%M") }}</small>
+        </span>
+        {# Boutons affichés uniquement pour l'auteur du nom. Le serveur
+           vérifie aussi de son côté (verifier_auteur dans routes.py). #}
+        {% if current_user.is_authenticated and ligne.auteur_id == current_user.id %}
         <span class="actions">
             <a href="{{ url_for('pages.modifier', id_nom=ligne.id) }}">Modifier</a>
             <form method="post" action="{{ url_for('pages.supprimer', id_nom=ligne.id) }}"

@@ -8,8 +8,8 @@ from datetime import datetime
 
 from flask_login import UserMixin
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import MetaData, String
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy import ForeignKey, MetaData, String
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from werkzeug.security import check_password_hash, generate_password_hash
 
 # Nombre maximum de caractères autorisés pour un nom.
@@ -51,6 +51,17 @@ class Nom(db.Model):
     # La date d'ajout, remplie automatiquement avec l'heure actuelle.
     date_ajout: Mapped[datetime] = mapped_column(default=datetime.now)
 
+    # Clé étrangère : l'id de l'utilisateur qui a ajouté ce nom. La base
+    # refuse un id qui ne correspond à aucun utilisateur.
+    # ondelete="CASCADE" : si un compte était supprimé, ses noms le seraient aussi.
+    # index=True : retrouver rapidement les noms d'un utilisateur.
+    auteur_id: Mapped[int] = mapped_column(
+        ForeignKey("utilisateurs.id", ondelete="CASCADE"), index=True
+    )
+
+    # Relation : un_nom.auteur donne directement l'objet Utilisateur.
+    auteur: Mapped["Utilisateur"] = relationship(back_populates="noms")
+
     def __repr__(self):
         # Affichage lisible quand on fait print(un_nom).
         return f"<Nom {self.id} {self.nom!r}>"
@@ -71,6 +82,9 @@ class Utilisateur(UserMixin, db.Model):
     mot_de_passe_hash: Mapped[str] = mapped_column(String(256))
 
     date_creation: Mapped[datetime] = mapped_column(default=datetime.now)
+
+    # Relation inverse : un_utilisateur.noms donne la liste de ses noms.
+    noms: Mapped[list["Nom"]] = relationship(back_populates="auteur")
 
     def definir_mot_de_passe(self, mot_de_passe):
         """Calcule et enregistre l'empreinte du mot de passe."""
